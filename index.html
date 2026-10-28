@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="A simple, private, browser-based quick notes app.">
+  <title>QuickNote — Your thoughts, organized</title>
+  <style>
+    :root {
+      --bg: #f5f7fb; --panel: #ffffff; --text: #20283a; --muted: #778198;
+      --line: #e7ebf2; --primary: #5c61e8; --primary-dark: #4549ca;
+      --danger: #d94c5c; --shadow: 0 12px 35px rgba(34, 45, 75, .07);
+      --radius: 18px;
+    }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: var(--bg); color: var(--text); font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif; }
+    button, input, textarea, select { font: inherit; }
+    button { cursor: pointer; }
+    .app { min-height: 100vh; }
+    .topbar { background: #fff; border-bottom: 1px solid var(--line); }
+    .topbar-inner { max-width: 1180px; margin: auto; padding: 20px 24px; display: flex; align-items: center; justify-content: space-between; gap: 18px; }
+    .brand { display: flex; align-items: center; gap: 12px; font-size: 1.2rem; font-weight: 800; letter-spacing: -.04em; }
+    .brand-mark { width: 40px; height: 40px; border-radius: 13px; background: linear-gradient(135deg, #777bff, #514bd7); color: #fff; display: grid; place-items: center; font-size: 22px; box-shadow: 0 6px 15px #5c61e833; }
+    .top-note { color: var(--muted); font-size: .88rem; }
+    main { max-width: 1180px; margin: 0 auto; padding: 38px 24px 60px; }
+    .hero { display: flex; align-items: flex-end; justify-content: space-between; gap: 20px; margin-bottom: 26px; }
+    .eyebrow { color: var(--primary); text-transform: uppercase; letter-spacing: .12em; font-size: .72rem; font-weight: 800; margin: 0 0 10px; }
+    h1 { font-size: clamp(2rem, 4vw, 3rem); letter-spacing: -.055em; line-height: 1.08; margin: 0 0 10px; }
+    .subtitle { color: var(--muted); margin: 0; line-height: 1.6; }
+    .primary { border: 0; border-radius: 12px; padding: 12px 17px; color: white; font-weight: 750; background: var(--primary); box-shadow: 0 7px 16px #5c61e82b; transition: transform .15s, background .15s; }
+    .primary:hover { background: var(--primary-dark); transform: translateY(-1px); }
+    .toolbar { display: flex; gap: 12px; margin: 26px 0 22px; }
+    .search-wrap { flex: 1; position: relative; }
+    .search-wrap span { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #929bb0; }
+    .search { width: 100%; border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 13px 14px 13px 42px; outline: none; }
+    .search:focus, input:focus, textarea:focus, select:focus { border-color: #9b9eff; box-shadow: 0 0 0 3px #5c61e817; outline: none; }
+    .filter { border: 1px solid var(--line); background: #fff; border-radius: 12px; padding: 0 13px; color: #4f5870; }
+    .stats { display: flex; gap: 20px; color: var(--muted); font-size: .86rem; margin: 0 0 18px; }
+    .stats strong { color: var(--text); }
+    .notes-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 17px; }
+    .note { background: var(--panel); border: 1px solid var(--line); border-radius: var(--radius); padding: 19px; min-height: 205px; display: flex; flex-direction: column; box-shadow: 0 4px 14px #1d2b4a05; transition: transform .18s, box-shadow .18s; }
+    .note:hover { transform: translateY(-3px); box-shadow: var(--shadow); }
+    .note-top { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 13px; }
+    .dot { width: 10px; height: 10px; border-radius: 50%; display: inline-block; margin-right: 7px; }
+    .tag { color: #69728a; font-size: .76rem; font-weight: 700; }
+    .icon-btn { border: 0; background: transparent; color: #929bb0; padding: 5px 7px; border-radius: 8px; font-size: 1.05rem; }
+    .icon-btn:hover { background: #f1f2ff; color: var(--primary); }
+    .note h3 { font-size: 1.04rem; margin: 0 0 9px; letter-spacing: -.02em; overflow-wrap: anywhere; }
+    .note p { color: #6d768d; font-size: .9rem; line-height: 1.65; margin: 0; white-space: pre-wrap; overflow-wrap: anywhere; }
+    .note-footer { margin-top: auto; padding-top: 20px; display: flex; align-items: center; justify-content: space-between; color: #9aa2b4; font-size: .76rem; }
+    .note-actions { display: flex; gap: 2px; }
+    .empty { grid-column: 1 / -1; text-align: center; padding: 65px 20px; background: #fff; border: 1px dashed #d9deea; border-radius: var(--radius); }
+    .empty-icon { font-size: 2.2rem; margin-bottom: 12px; }
+    .empty h2 { margin: 0 0 8px; font-size: 1.2rem; }
+    .empty p { color: var(--muted); margin: 0 0 18px; }
+    .privacy { margin-top: 28px; color: #8b94a8; font-size: .8rem; text-align: center; }
+    .modal-backdrop { display: none; position: fixed; inset: 0; z-index: 10; background: #151b2b7a; padding: 18px; align-items: center; justify-content: center; }
+    .modal-backdrop.open { display: flex; }
+    .modal { background: #fff; border-radius: 20px; width: min(560px, 100%); padding: 25px; box-shadow: 0 25px 80px #10182b45; max-height: 90vh; overflow: auto; }
+    .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+    .modal-header h2 { margin: 0; font-size: 1.35rem; letter-spacing: -.03em; }
+    .close { border: 0; background: #f2f4f8; border-radius: 10px; width: 35px; height: 35px; font-size: 1.2rem; color: #59627a; }
+    .field { margin-bottom: 16px; }
+    .field label { display: block; margin-bottom: 7px; font-size: .86rem; font-weight: 750; color: #465069; }
+    .field input, .field textarea, .field select { width: 100%; border: 1px solid var(--line); border-radius: 11px; padding: 12px 13px; color: var(--text); background: #fff; }
+    .field textarea { min-height: 150px; resize: vertical; line-height: 1.55; }
+    .form-actions { display: flex; justify-content: flex-end; gap: 10px; margin-top: 22px; }
+    .secondary { border: 1px solid var(--line); background: #fff; border-radius: 11px; padding: 11px 15px; font-weight: 700; color: #5b647b; }
+    .danger { color: var(--danger); }
+    .toast { position: fixed; bottom: 22px; left: 50%; transform: translate(-50%, 20px); opacity: 0; pointer-events: none; background: #20283a; color: #fff; padding: 12px 17px; border-radius: 12px; font-size: .88rem; box-shadow: var(--shadow); transition: .25s; z-index: 20; }
+    .toast.show { opacity: 1; transform: translate(-50%, 0); }
+    @media (max-width: 850px) { .notes-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); } }
+    @media (max-width: 600px) {
+      .topbar-inner { padding: 15px 17px; } .top-note { display: none; } main { padding: 30px 16px 45px; }
+      .hero { align-items: flex-start; flex-direction: column; } .hero .primary { width: 100%; }
+      .toolbar { flex-direction: column; } .filter { min-height: 44px; } .notes-grid { grid-template-columns: 1fr; }
+      .note { min-height: 180px; }
+    }
+  </style>
+</head>
+<body>
+<div class="app">
+  <header class="topbar">
+    <div class="topbar-inner">
+      <div class="brand"><span class="brand-mark">✎</span><span>QuickNote</span></div>
+      <div class="top-note">A little space for your big ideas.</div>
+    </div>
+  </header>
+  <main>
+    <section class="hero">
+      <div>
+        <p class="eyebrow">Your personal workspace</p>
+        <h1>Good ideas deserve<br>to be remembered.</h1>
+        <p class="subtitle">Capture a thought, keep a plan, and find it when you need it.</p>
+      </div>
+      <button class="primary" id="addNoteBtn">＋ Create a note</button>
+    </section>
+    <section class="toolbar" aria-label="Note tools">
+      <div class="search-wrap"><span>⌕</span><input class="search" id="searchInput" type="search" placeholder="Search your notes..." aria-label="Search notes"></div>
+      <select class="filter" id="filterSelect" aria-label="Filter notes">
+        <option value="all">All categories</option>
+        <option value="Personal">Personal</option>
+        <option value="Work">Work</option>
+        <option value="Study">Study</option>
+        <option value="Ideas">Ideas</option>
+      </select>
+    </section>
+    <div class="stats"><span><strong id="noteCount">0</strong> notes</span><span id="saveStatus">Saved in this browser</span></div>
+    <section class="notes-grid" id="notesGrid" aria-live="polite"></section>
+    <p class="privacy">🔒 Your notes are stored locally in this browser. No account required.</p>
+  </main>
+</div>
+
+<div class="modal-backdrop" id="modalBackdrop" role="dialog" aria-modal="true" aria-labelledby="modalTitle">
+  <div class="modal">
+    <div class="modal-header"><h2 id="modalTitle">Create a note</h2><button class="close" id="closeModal" aria-label="Close">×</button></div>
+    <form id="noteForm">
+      <div class="field"><label for="noteTitle">Title</label><input id="noteTitle" maxlength="100" required placeholder="Give your note a title"></div>
+      <div class="field"><label for="noteBody">Note</label><textarea id="noteBody" maxlength="5000" placeholder="Write down your thoughts..."></textarea></div>
+      <div class="field"><label for="noteCategory">Category</label><select id="noteCategory"><option>Personal</option><option>Work</option><option>Study</option><option>Ideas</option></select></div>
+      <div class="form-actions"><button type="button" class="secondary" id="cancelBtn">Cancel</button><button type="submit" class="primary">Save note</button></div>
+    </form>
+  </div>
+</div>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+(() => {
+  const STORAGE_KEY = "quicknote_workora_v1";
+  const colors = { Personal: "#f3a85b", Work: "#5c61e8", Study: "#26a69a", Ideas: "#dc6e9b" };
+  const starterNotes = [
+    { id: "starter-1", title: "Welcome to QuickNote 👋", body: "This is your personal space for ideas, reminders, and plans. Edit or delete this note, or create your own.", category: "Personal", updatedAt: new Date().toISOString() },
+    { id: "starter-2", title: "Study plan", body: "• Review today's lessons\\n• Make short revision notes\\n• Practice one example", category: "Study", updatedAt: new Date(Date.now()-3600000).toISOString() },
+    { id: "starter-3", title: "A small idea", body: "Write ideas down as soon as they arrive. You can sort them later.", category: "Ideas", updatedAt: new Date(Date.now()-7200000).toISOString() }
+  ];
+  let notes = loadNotes();
+  let editingId = null;
+  const $ = id => document.getElementById(id);
+  const grid = $("notesGrid"), modal = $("modalBackdrop"), form = $("noteForm");
+
+  function loadNotes() {
+    try {
+      const saved = localStorage.getItem(STORAGE_KEY);
+      return saved === null ? starterNotes : JSON.parse(saved);
+    } catch { return starterNotes; }
+  }
+  function persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(notes));
+      $("saveStatus").textContent = "All changes saved";
+    } catch { $("saveStatus").textContent = "Browser storage unavailable"; }
+  }
+  function escapeHTML(value) {
+    return String(value).replace(/[&<>"']/g, ch => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[ch]));
+  }
+  function formatDate(value) {
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Just now";
+    return date.toLocaleDateString(undefined, { month: "short", day: "numeric", year: "numeric" });
+  }
+  function render() {
+    const query = $("searchInput").value.trim().toLowerCase();
+    const category = $("filterSelect").value;
+    const shown = notes.filter(note =>
+      (category === "all" || note.category === category) &&
+      (note.title.toLowerCase().includes(query) || note.body.toLowerCase().includes(query))
+    ).sort((a,b) => new Date(b.updatedAt) - new Date(a.updatedAt));
+    $("noteCount").textContent = notes.length;
+    if (!shown.length) {
+      grid.innerHTML = `<div class="empty"><div class="empty-icon">✎</div><h2>${notes.length ? "No matching notes" : "Your note space is empty"}</h2><p>${notes.length ? "Try another search or category." : "Create your first note to get started."}</p><button class="primary" id="emptyAddBtn">＋ Create a note</button></div>`;
+      $("emptyAddBtn").addEventListener("click", () => openModal());
+      return;
+    }
+    grid.innerHTML = shown.map(note => `
+      <article class="note">
+        <div class="note-top"><span class="tag"><i class="dot" style="background:${colors[note.category] || colors.Personal}"></i>${escapeHTML(note.category)}</span>
+          <div class="note-actions"><button class="icon-btn" data-edit="${escapeHTML(note.id)}" aria-label="Edit ${escapeHTML(note.title)}" title="Edit">✎</button><button class="icon-btn danger" data-delete="${escapeHTML(note.id)}" aria-label="Delete ${escapeHTML(note.title)}" title="Delete">⌫</button></div>
+        </div>
+        <h3>${escapeHTML(note.title)}</h3><p>${escapeHTML(note.body || "No additional details.")}</p>
+        <div class="note-footer"><span>Updated ${formatDate(note.updatedAt)}</span><span>QuickNote</span></div>
+      </article>`).join("");
+    grid.querySelectorAll("[data-edit]").forEach(button => button.addEventListener("click", () => editNote(button.dataset.edit)));
+    grid.querySelectorAll("[data-delete]").forEach(button => button.addEventListener("click", () => deleteNote(button.dataset.delete)));
+  }
+  function openModal(note) {
+    editingId = note ? note.id : null;
+    $("modalTitle").textContent = note ? "Edit note" : "Create a note";
+    $("noteTitle").value = note ? note.title : "";
+    $("noteBody").value = note ? note.body : "";
+    $("noteCategory").value = note ? note.category : "Personal";
+    modal.classList.add("open");
+    setTimeout(() => $("noteTitle").focus(), 40);
+  }
+  function closeModal() { modal.classList.remove("open"); form.reset(); editingId = null; }
+  function editNote(id) {
+    const note = notes.find(item => item.id === id);
+    if (note) openModal(note);
+  }
+  function deleteNote(id) {
+    const note = notes.find(item => item.id === id);
+    if (!note || !window.confirm(`Delete "${note.title}"? This cannot be undone.`)) return;
+    notes = notes.filter(item => item.id !== id);
+    persist(); render(); showToast("Note deleted");
+  }
+  function showToast(message) {
+    const toast = $("toast"); toast.textContent = message; toast.classList.add("show");
+    clearTimeout(showToast.timer); showToast.timer = setTimeout(() => toast.classList.remove("show"), 2200);
+  }
+  $("addNoteBtn").addEventListener("click", () => openModal());
+  $("closeModal").addEventListener("click", closeModal);
+  $("cancelBtn").addEventListener("click", closeModal);
+  modal.addEventListener("click", event => { if (event.target === modal) closeModal(); });
+  document.addEventListener("keydown", event => { if (event.key === "Escape") closeModal(); });
+  $("searchInput").addEventListener("input", render);
+  $("filterSelect").addEventListener("change", render);
+  form.addEventListener("submit", event => {
+    event.preventDefault();
+    const title = $("noteTitle").value.trim();
+    if (!title) { $("noteTitle").focus(); return; }
+    const existing = editingId ? notes.find(note => note.id === editingId) : null;
+    const note = {
+      id: existing ? existing.id : (crypto.randomUUID ? crypto.randomUUID() : String(Date.now())),
+      title, body: $("noteBody").value.trim(), category: $("noteCategory").value,
+      updatedAt: new Date().toISOString()
+    };
+    notes = existing ? notes.map(item => item.id === editingId ? note : item) : [note, ...notes];
+    persist(); render(); closeModal(); showToast(existing ? "Note updated" : "Note created");
+  });
+  render();
+})();
+</script>
+</body>
+</html>
